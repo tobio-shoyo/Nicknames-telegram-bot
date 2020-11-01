@@ -8,7 +8,13 @@ import datetime
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-TOKEN = '507231015:AAGwqg5jtub2bQfo5yfmyVh1XNwXwH1fk7o'
+TOKEN = ''
+if not os.path.exists('bot_settings.ini'):
+    sys.exit('FAILED TO FIND SETTING FILE!')
+else:
+    config = configparser.ConfigParser()
+    config.read('bot_settings.ini')
+    TOKEN = config['BOT']['TOKEN']
 
 
 # ------------------------------------------------------
