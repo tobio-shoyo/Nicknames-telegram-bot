@@ -3,10 +3,12 @@
 import os.path
 import pickle
 import time
+import datetime
 
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-TOKEN = 'YOURTOKENHERE'
+TOKEN = '507231015:AAGwqg5jtub2bQfo5yfmyVh1XNwXwH1fk7o'
 
 
 # ------------------------------------------------------
@@ -92,12 +94,16 @@ def not_cinic(update, context):
 
 
 def get_group_members(update, context):
-    with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-        commands = pickle.load(input_file)
-    try:
-        context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get('everyone')))
-    except Exception:
-        print('Couldnt send this group\'s contents')
+    if len(context.args) == 1:
+        with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
+            commands = pickle.load(input_file)
+        try:
+            context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get(context.args[0])))
+        except Exception:
+            print('Couldnt get this group\'s contents')
+    else:
+        context.bot.send_message(chat_id=update.message.chat_id,
+                                 text='This command takes 1 argument!\nExample: get_group_members groupName')
 
 
 def replace_member(update, context):
@@ -110,12 +116,32 @@ def replace_member(update, context):
             commands[context.args[0]].append(context.args[2])
             with open(r"groupNames.p", "wb") as output_file:
                 pickle.dump(commands, output_file)
-                print('Changed: {} to {} in: {}'.format(context.args[1], context.args[2], context.args[0]))
+                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()),context.args[1], context.args[2], context.args[0]))
+                datetime.datetime.now()
         except Exception:
             context.bot.send_message(chat_id=update.message.chat_id, text='Could\'t replace member!')
     else:
         context.bot.send_message(chat_id=update.message.chat_id,
                                  text='This command takes 3 arguments!\nExample: replaceMember everyone @user @user')
+
+
+def add_group(update, context):
+    if len(context.args) >= 2:
+        with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
+            commands = pickle.load(input_file)
+        if context.args[0] not in commands:
+            new_item_list = []
+            for item in range(1, len(context.args)):
+                new_item_list.append(context.args[item])
+            commands[context.args[0]] = new_item_list
+            with open(r"groupNames.p", "wb") as output_file:
+                pickle.dump(commands, output_file)
+            print('[{}] Group {} added! ', context.args[0])
+        else:
+            print('group exists')
+    else:
+        print('Too less arguments')
+
 
 
 updater = Updater(TOKEN, use_context=True)
@@ -126,6 +152,7 @@ for key in commands.keys():     # add nickname commands according to the diction
 updater.dispatcher.add_handler(CommandHandler('not_cinic', not_cinic))
 updater.dispatcher.add_handler(CommandHandler('get_group', get_group_members))
 updater.dispatcher.add_handler(CommandHandler('replace_member', replace_member))
+updater.dispatcher.add_handler(CommandHandler('add_group', add_group))
 
 
 # ------------------------------------------------------
