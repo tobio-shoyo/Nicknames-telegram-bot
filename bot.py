@@ -6,7 +6,6 @@ import time
 import datetime
 
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 TOKEN = ''
 if not os.path.exists('bot_settings.ini'):
