@@ -76,22 +76,6 @@ def nickname_reply(update, context):
         context.bot.send_message(update.message.chat_id, text='{}:  {}'.format(sender, tags))
 
 
-def not_cinic(update, context):
-    times_repeat = 3
-    if len(context.args) > 0:
-        times_repeat = context.args[0]
-        try:
-            times_repeat = int(times_repeat)
-        except ValueError:
-            times_repeat = 3
-        if times_repeat < 1 or times_repeat > 10:
-            times_repeat = 3
-    for inter in range(0, times_repeat):  # 3 iterations
-        context.bot.send_message(chat_id=update.message.chat_id,
-                                 text="לא ציני/ת {}".format(update.message.from_user.first_name))
-        time.sleep(1.5)
-
-
 def get_group_members(update, context):
     if len(context.args) == 1:
         with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
