@@ -18,18 +18,11 @@ else:
 
 
 # ------------------------------------------------------
-default = {'everyone': ['@OmerT',
-                         '@JohnnyBeGod',
-                         '@Mataniger',
-                         '@YuvalMiz',
-                         '@Okerbis',
-                         '@DorShw',
-                         '@LiadSh',
-                         '@noamlol',
-                         '@LeeGabay'],
-            'nomer': ['@noamlol', '@OmerT'],
-            'leedor': ['@LeeGabay', '@DorShw'],
-            'capsi': ['@JohnnyBeGod', '@YuvalMiz']}
+default = {'everyone': ['@user1',
+                         '@user2',
+                         '@user3',
+                         '@user4'],
+            'nickname1': ['@user1', '@user2']}
 
 
 if not os.path.exists('groupNames.p'):
