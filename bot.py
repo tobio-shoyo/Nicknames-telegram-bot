@@ -2,10 +2,10 @@
 
 import os.path
 import pickle
-import time
 import datetime
+import configparser
 
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler
 
 TOKEN = ''
 if not os.path.exists('bot_settings.ini'):
@@ -15,13 +15,11 @@ else:
     config.read('bot_settings.ini')
     TOKEN = config['BOT']['TOKEN']
 
-
-# ------------------------------------------------------
 default = {'everyone': ['@user1',
-                         '@user2',
-                         '@user3',
-                         '@user4'],
-            'nickname1': ['@user1', '@user2']}
+                        '@user2',
+                        '@user3',
+                        '@user4'],
+           'nickname1': ['@user1', '@user2']}
 
 
 if not os.path.exists('groupNames.p'):
@@ -30,6 +28,8 @@ if not os.path.exists('groupNames.p'):
     print('pickle file created with default values')
 else:
     print('pickle file loaded')
+    with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
+        commands = pickle.load(input_file)
 
 
 def nickname_reply(update, context):
@@ -37,16 +37,14 @@ def nickname_reply(update, context):
     Function that receives message and context
     deletes the "call message" and replies instead
     """
-    with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-        commands = pickle.load(input_file)
-    asked_nickname = update.message.text.replace('/', '')   # Get only the command name (to pull out of the dictionary)
+    asked_nickname = update.message.text[1:]   # Get only the command name since commands in telegram start with '/'
     asked_nickname = asked_nickname.replace(' ' + ' '.join(context.args), '')   # Remove any args from the text
     asked_nickname = asked_nickname.replace('@OurUf_bot' + ' '.join(context.args), '')
     names = commands[asked_nickname]    # Get the actual tags for every nickname
     try:
         names.remove('@' + update.message.from_user.username)  # Remove the sender from the tag list
     except Exception:
-        None
+        pass
     tags = ' '.join(names)
 
     # get the message to reply to
@@ -59,7 +57,7 @@ def nickname_reply(update, context):
         try:    # Try to delete the message. == If you have permissions to do so
             context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
         except Exception:
-            None
+            pass
         # create new message
         try:
             update.message.reply_text('{}:  {}'.format(sender, tags), reply_to_message_id=message_to_reply)
@@ -70,15 +68,13 @@ def nickname_reply(update, context):
         try:  # Try to delete the message. == If you have permissions to do so
             context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
         except Exception:
-            None
+            pass
         # create new message
         context.bot.send_message(update.message.chat_id, text='{}:  {}'.format(sender, tags))
 
 
 def get_group_members(update, context):
     if len(context.args) == 1:
-        with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-            commands = pickle.load(input_file)
         try:
             context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get(context.args[0])))
         except Exception:
@@ -90,16 +86,13 @@ def get_group_members(update, context):
 
 def replace_member(update, context):
     if len(context.args) == 3:
-        with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-            commands = pickle.load(input_file)
         member_tag = context.args[1]
         try:
             commands[context.args[0]].remove(member_tag)
             commands[context.args[0]].append(context.args[2])
             with open(r"groupNames.p", "wb") as output_file:
                 pickle.dump(commands, output_file)
-                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()),context.args[1], context.args[2], context.args[0]))
-                datetime.datetime.now()
+                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1], context.args[2], context.args[0]))
         except Exception:
             context.bot.send_message(chat_id=update.message.chat_id, text='Could\'t replace member!')
     else:
@@ -109,8 +102,6 @@ def replace_member(update, context):
 
 def add_group(update, context):
     if len(context.args) >= 2:
-        with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-            commands = pickle.load(input_file)
         if context.args[0] not in commands:
             new_item_list = []
             for item in range(1, len(context.args)):
@@ -125,20 +116,18 @@ def add_group(update, context):
         print('Too less arguments')
 
 
+def main():
+    updater = Updater(TOKEN, use_context=True)
+    commands = pickle.load(open('groupNames.p', 'rb'))
+    for key in commands.keys():     # add nickname commands according to the dictionary (key is command name)
+        updater.dispatcher.add_handler(CommandHandler(key, nickname_reply))
 
-updater = Updater(TOKEN, use_context=True)
-commands = pickle.load(open('groupNames.p', 'rb'))
-for key in commands.keys():     # add nickname commands according to the dictionary (key is command name)
-    updater.dispatcher.add_handler(CommandHandler(key, nickname_reply))
-
-updater.dispatcher.add_handler(CommandHandler('not_cinic', not_cinic))
-updater.dispatcher.add_handler(CommandHandler('get_group', get_group_members))
-updater.dispatcher.add_handler(CommandHandler('replace_member', replace_member))
-updater.dispatcher.add_handler(CommandHandler('add_group', add_group))
-
-
-# ------------------------------------------------------
+    updater.dispatcher.add_handler(CommandHandler('get_group', get_group_members))
+    updater.dispatcher.add_handler(CommandHandler('replace_member', replace_member))
+    updater.dispatcher.add_handler(CommandHandler('add_group', add_group))
+    updater.start_polling()
+    updater.idle()
 
 
-updater.start_polling()
-updater.idle()
+if __name__ == "__main__":
+    main()
