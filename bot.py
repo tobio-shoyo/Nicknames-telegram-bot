@@ -7,29 +7,34 @@ import configparser
 
 from telegram.ext import Updater, CommandHandler
 
-TOKEN = ''
-if not os.path.exists('bot_settings.ini'):
-    sys.exit('FAILED TO FIND SETTING FILE!')
-else:
-    config = configparser.ConfigParser()
-    config.read('bot_settings.ini')
-    TOKEN = config['BOT']['TOKEN']
 
-default = {'everyone': ['@user1',
-                        '@user2',
-                        '@user3',
-                        '@user4'],
-           'nickname1': ['@user1', '@user2']}
+def load_token():
+    global token
+    if not os.path.exists('bot_settings.ini'):
+        sys.exit('FAILED TO FIND SETTING FILE!')
+    else:
+        config = configparser.ConfigParser()
+        config.read('bot_settings.ini')
+        token = config['BOT']['TOKEN']
 
 
-if not os.path.exists('groupNames.p'):
-    with open(r"groupNames.p", "wb") as output_file:
-        pickle.dump(default, output_file)
-    print('pickle file created with default values')
-else:
-    print('pickle file loaded')
-    with open(r"groupNames.p", "rb") as input_file:     # get the current data from the pickle file
-        commands = pickle.load(input_file)
+def load_groups():
+    global commands
+    default = {'everyone': ['@user1',
+                            '@user2',
+                            '@user3',
+                            '@user4'],
+               'nickname1': ['@user1', '@user2']}
+
+    try:
+        with open(r"groupNames.p", "rb") as input_file:  # get the current data from the pickle file
+            commands = pickle.load(input_file)
+        print('pickle file loaded')
+    except FileNotFoundError:
+        with open(r"groupNames.p", "wb") as output_file:
+            pickle.dump(default, output_file)
+        print('pickle file created with default values')
+        commands = default
 
 
 def nickname_reply(update, context):
@@ -73,12 +78,12 @@ def nickname_reply(update, context):
         context.bot.send_message(update.message.chat_id, text='{}:  {}'.format(sender, tags))
 
 
-def get_group_members(update, context):
+def get_group(update, context):
     if len(context.args) == 1:
         try:
             context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get(context.args[0])))
         except Exception:
-            print('Couldnt get this group\'s contents')
+            print("Couldn't get this group's contents")
     else:
         context.bot.send_message(chat_id=update.message.chat_id,
                                  text='This command takes 1 argument!\nExample: get_group_members groupName')
@@ -92,7 +97,8 @@ def replace_member(update, context):
             commands[context.args[0]].append(context.args[2])
             with open(r"groupNames.p", "wb") as output_file:
                 pickle.dump(commands, output_file)
-                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1], context.args[2], context.args[0]))
+                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1],
+                                                             context.args[2], context.args[0]))
         except Exception:
             context.bot.send_message(chat_id=update.message.chat_id, text='Could\'t replace member!')
     else:
@@ -117,12 +123,14 @@ def add_group(update, context):
 
 
 def main():
-    updater = Updater(TOKEN, use_context=True)
-    commands = pickle.load(open('groupNames.p', 'rb'))
+    load_token()
+    load_groups()
+
+    updater = Updater(token, use_context=True)
     for key in commands.keys():     # add nickname commands according to the dictionary (key is command name)
         updater.dispatcher.add_handler(CommandHandler(key, nickname_reply))
 
-    updater.dispatcher.add_handler(CommandHandler('get_group', get_group_members))
+    updater.dispatcher.add_handler(CommandHandler('get_group', get_group))
     updater.dispatcher.add_handler(CommandHandler('replace_member', replace_member))
     updater.dispatcher.add_handler(CommandHandler('add_group', add_group))
     updater.start_polling()
