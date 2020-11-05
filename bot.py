@@ -6,6 +6,7 @@ import datetime
 import configparser
 
 from telegram.ext import Updater, CommandHandler
+from telegram import error
 
 
 def load_token():
@@ -48,8 +49,8 @@ def nickname_reply(update, context):
     names = commands[asked_nickname]    # Get the actual tags for every nickname
     try:
         names.remove('@' + update.message.from_user.username)  # Remove the sender from the tag list
-    except Exception:
-        pass
+    except ValueError:
+        pass    # The sender is not part of the group, so no need to remove him(obviously)
     tags = ' '.join(names)
 
     # get the message to reply to
@@ -61,8 +62,8 @@ def nickname_reply(update, context):
         # delete the reply
         try:    # Try to delete the message. == If you have permissions to do so
             context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
-        except Exception:
-            pass
+        except error.BadRequest:
+            print('No permission to delete message')
         # create new message
         try:
             update.message.reply_text('{}:  {}'.format(sender, tags), reply_to_message_id=message_to_reply)
@@ -72,8 +73,8 @@ def nickname_reply(update, context):
         # delete the reply
         try:  # Try to delete the message. == If you have permissions to do so
             context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
-        except Exception:
-            pass
+        except error.BadRequest:
+            print('No permission to delete message')
         # create new message
         context.bot.send_message(update.message.chat_id, text='{}:  {}'.format(sender, tags))
 
@@ -82,7 +83,7 @@ def get_group(update, context):
     if len(context.args) == 1:
         try:
             context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get(context.args[0])))
-        except Exception:
+        except TypeError:
             print("Couldn't get this group's contents")
     else:
         context.bot.send_message(chat_id=update.message.chat_id,
@@ -99,7 +100,7 @@ def replace_member(update, context):
                 pickle.dump(commands, output_file)
                 print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1],
                                                              context.args[2], context.args[0]))
-        except Exception:
+        except ValueError:  # If the member we're trying to remove isn't in that group
             context.bot.send_message(chat_id=update.message.chat_id, text='Could\'t replace member!')
     else:
         context.bot.send_message(chat_id=update.message.chat_id,
