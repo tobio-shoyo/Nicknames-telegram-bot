@@ -1,22 +1,26 @@
-#! Python3
+#!python3
+
 
 import os.path
 import pickle
 import datetime
 import configparser
+import logging
+import sys
 
 from telegram.ext import Updater, CommandHandler
 from telegram import error
 
 
-def load_token():
-    global token
+def load_settings():
+    global settings
     if not os.path.exists('bot_settings.ini'):
+        logging.error('FAILED TO FIND SETTING FILE!')
         sys.exit('FAILED TO FIND SETTING FILE!')
     else:
         config = configparser.ConfigParser()
         config.read('bot_settings.ini')
-        token = config['BOT']['TOKEN']
+        settings = config['BOT']
 
 
 def load_groups():
@@ -30,11 +34,11 @@ def load_groups():
     try:
         with open(r"groupNames.p", "rb") as input_file:  # get the current data from the pickle file
             commands = pickle.load(input_file)
-        print('pickle file loaded')
+        logging.info('Pickle file loaded')
     except FileNotFoundError:
         with open(r"groupNames.p", "wb") as output_file:
             pickle.dump(default, output_file)
-        print('pickle file created with default values')
+        logging.info('Pickle file created with default values')
         commands = default
 
 
@@ -61,9 +65,10 @@ def nickname_reply(update, context):
         message_to_reply = update.message.reply_to_message.message_id
         # delete the reply
         try:    # Try to delete the message. == If you have permissions to do so
-            context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
+            if settings['WITH_DELETE'].lower() == 'true':
+                context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
         except error.BadRequest:
-            print('No permission to delete message')
+            logging.debug('No permission to delete message')
         # create new message
         try:
             update.message.reply_text('{}:  {}'.format(sender, tags), reply_to_message_id=message_to_reply)
@@ -72,9 +77,10 @@ def nickname_reply(update, context):
     else:  # If the message is not a reply
         # delete the reply
         try:  # Try to delete the message. == If you have permissions to do so
-            context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
+            if settings['WITH_DELETE'].lower() == 'true':
+                context.bot.delete_message(chat_id=update.message.chat_id, message_id=update.message.message_id)
         except error.BadRequest:
-            print('No permission to delete message')
+            logging.debug('No permission to delete message')
         # create new message
         context.bot.send_message(update.message.chat_id, text='{}:  {}'.format(sender, tags))
 
@@ -84,7 +90,7 @@ def get_group(update, context):
         try:
             context.bot.send_message(chat_id=update.message.chat_id, text=' '.join(commands.get(context.args[0])))
         except TypeError:
-            print("Couldn't get this group's contents")
+            logging.debug("Couldn't get this group's contents")
     else:
         context.bot.send_message(chat_id=update.message.chat_id,
                                  text='This command takes 1 argument!\nExample: get_group_members groupName')
@@ -98,7 +104,7 @@ def replace_member(update, context):
             commands[context.args[0]].append(context.args[2])
             with open(r"groupNames.p", "wb") as output_file:
                 pickle.dump(commands, output_file)
-                print('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1],
+                logging.info('[{}] Changed: {} to {} in: {}'.format(str(datetime.datetime.now()), context.args[1],
                                                              context.args[2], context.args[0]))
         except ValueError:  # If the member we're trying to remove isn't in that group
             context.bot.send_message(chat_id=update.message.chat_id, text='Could\'t replace member!')
@@ -116,18 +122,23 @@ def add_group(update, context):
             commands[context.args[0]] = new_item_list
             with open(r"groupNames.p", "wb") as output_file:
                 pickle.dump(commands, output_file)
-            print('[{}] Group {} added! ', context.args[0])
+            logging.info('[{}] Group {} added! ', context.args[0])
         else:
-            print('group exists')
+            context.bot.send_message(chat_id=update.message.chat_id,
+                                     text='This group already exists'
+                                     )
     else:
-        print('Too less arguments')
+        context.bot.send_message(chat_id=update.message.chat_id,
+                                 text='This command takes 2+ arguments!')
 
 
 def main():
-    load_token()
+    logging.basicConfig(filename='bot_logs.log', format='[%(asctime)s] - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
+                        level=logging.INFO)    # initialize logging module and format. exclude debug messages
+    load_settings()
     load_groups()
 
-    updater = Updater(token, use_context=True)
+    updater = Updater(settings['TOKEN'], use_context=True)
     for key in commands.keys():     # add nickname commands according to the dictionary (key is command name)
         updater.dispatcher.add_handler(CommandHandler(key, nickname_reply))
 
