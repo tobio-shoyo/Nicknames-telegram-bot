@@ -1,6 +1,5 @@
 #!python3
 
-
 import os.path
 import pickle
 import datetime
@@ -49,7 +48,7 @@ def nickname_reply(update, context):
     """
     asked_nickname = update.message.text[1:]   # Get only the command name since commands in telegram start with '/'
     asked_nickname = asked_nickname.replace(' ' + ' '.join(context.args), '')   # Remove any args from the text
-    asked_nickname = asked_nickname.replace('@OurUf_bot' + ' '.join(context.args), '')
+    asked_nickname = asked_nickname.replace(settings['USERNAME'] + ' '.join(context.args), '')
     names = commands[asked_nickname]    # Get the actual tags for every nickname
     try:
         names.remove('@' + update.message.from_user.username)  # Remove the sender from the tag list
